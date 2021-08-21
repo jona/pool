@@ -14,14 +14,26 @@ contract Pool {
   // Total depositors
   uint256 private totalDepositors;
 
-  // Balances
-  mapping(address => uint256) private balances;
+  // Track amount and block number
+  struct Depositor {
+    uint256 balance;
+    uint256 firstDepositAt;
+  }
 
-  // Depositor addresses
-  mapping(uint256 => address) private depositorAddresses;
+  // Depositors
+  mapping(address => Depositor) private depositors;
+
+  // Total Rewards
+  uint256 private totalRewards;
+
+  // Track amount and block number
+  struct Reward {
+    uint256 amount;
+    uint256 depositedAt;
+  }
 
   // Rewards
-  mapping(uint256 => uint256) private rewards;
+  mapping(uint256 => Reward) private rewards;
 
   // Constructor
   constructor() {
@@ -45,8 +57,11 @@ contract Pool {
   function deposit(uint256 amount) public payable {
     require(msg.value == amount, "Amount does not match value");
 
-    balances[msg.sender] = balances[msg.sender].add(amount);
-    depositorAddresses[totalDepositors] = msg.sender;
+    if (depositors[msg.sender].balance == 0) {
+      depositors[msg.sender].firstDepositAt = block.number;
+    }
+
+    depositors[msg.sender].balance = depositors[msg.sender].balance.add(amount);
 
     totalDepositors += 1;
 
@@ -55,13 +70,24 @@ contract Pool {
 
   // Deposit all ETH associated with msg.sender from pool
   function withdraw() public {
-    require(balances[msg.sender] > 0, "No pool exists for this sender");
-    require(address(this).balance >= balances[msg.sender], "Not enough funds");
+    require(depositors[msg.sender].balance > 0, "No pool exists for this sender");
 
-    uint256 withdrawAmount = balances[msg.sender];
+    uint256 withdrawAmount = depositors[msg.sender].balance;
+
+    // NOTE: Once all rewards are taken for a specific Reward,
+    // we need to remove it from storage somehow.
+    // How do we know if the last depositor for a given rewards
+    // has withdrawn their deposit + reward?
+    for (uint256 i = 0; i < totalRewards; i++) {
+      if (rewards[i].depositedAt >= depositors[msg.sender].firstDepositAt) {
+        withdrawAmount += rewards[i].amount;
+      }
+    }
+
+    require(withdrawAmount <= address(this).balance, "Not enough funds");
 
     // Prevent re-entrancy attacks
-    balances[msg.sender] = 0;
+    delete depositors[msg.sender];
 
     payable(msg.sender).transfer(withdrawAmount);
 
@@ -80,11 +106,9 @@ contract Pool {
     // because it's not precise
     uint256 shareAmount = msg.value.mul(PRECISION).div(totalDepositors).div(PRECISION);
 
-    // NOTE: This seems inefficient. There's a solidity design pattern
-    // I'm missing here that would help solve for this inefficiency.
-    for (uint256 i = 0; i < totalDepositors; i++) {
-      balances[depositorAddresses[i]] = balances[depositorAddresses[i]].add(shareAmount);
-    }
+    rewards[totalRewards].amount = shareAmount;
+    rewards[totalRewards].depositedAt = block.number;
+    totalRewards += 1;
 
     emit RewardsDeposited(msg.sender, msg.value);
   }
@@ -94,6 +118,6 @@ contract Pool {
   }
 
   function getMyBalance() public view returns (uint256) {
-    return balances[msg.sender];
+    return depositors[msg.sender].balance;
   }
 }
