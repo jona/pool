@@ -60,11 +60,10 @@ contract Pool {
 
     if (depositors[msg.sender].balance == 0) {
       depositors[msg.sender].firstDepositAt = block.number;
+      totalDepositors += 1;
     }
 
     depositors[msg.sender].balance = depositors[msg.sender].balance.add(amount);
-
-    totalDepositors += 1;
 
     emit Deposit(msg.sender, msg.value);
   }
