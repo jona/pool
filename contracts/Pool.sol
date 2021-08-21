@@ -29,6 +29,7 @@ contract Pool {
   // Track amount and block number
   struct Reward {
     uint256 amount;
+    uint256 depositorCount;
     uint256 depositedAt;
   }
 
@@ -68,19 +69,20 @@ contract Pool {
     emit Deposit(msg.sender, msg.value);
   }
 
-  // Deposit all ETH associated with msg.sender from pool
+  // Withdraw deposit and rewards
   function withdraw() public {
     require(depositors[msg.sender].balance > 0, "No pool exists for this sender");
 
     uint256 withdrawAmount = depositors[msg.sender].balance;
 
-    // NOTE: Once all rewards are taken for a specific Reward,
-    // we need to remove it from storage somehow.
-    // How do we know if the last depositor for a given rewards
-    // has withdrawn their deposit + reward?
     for (uint256 i = 0; i < totalRewards; i++) {
       if (rewards[i].depositedAt >= depositors[msg.sender].firstDepositAt) {
         withdrawAmount += rewards[i].amount;
+        rewards[i].depositorCount -= 1;
+      }
+
+      if (rewards[i].depositorCount == 0) {
+        delete rewards[i];
       }
     }
 
@@ -107,6 +109,7 @@ contract Pool {
     uint256 shareAmount = msg.value.mul(PRECISION).div(totalDepositors).div(PRECISION);
 
     rewards[totalRewards].amount = shareAmount;
+    rewards[totalRewards].depositorCount = totalDepositors;
     rewards[totalRewards].depositedAt = block.number;
     totalRewards += 1;
 
@@ -115,6 +118,10 @@ contract Pool {
 
   function getBalance() public view returns (uint256) {
     return address(this).balance;
+  }
+
+  function getReward(uint256 i) public view returns (Reward memory) {
+    return rewards[i];
   }
 
   function getMyBalance() public view returns (uint256) {
