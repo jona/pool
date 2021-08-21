@@ -1,6 +1,6 @@
-# Ethereum Solidity Starter
+# Pool
 
-This is a skeleton repository to work as a foundation for a smart contracts project using Solidity.
+Pool contracts
 
 ## Quickstart
 
@@ -17,13 +17,16 @@ This is a skeleton repository to work as a foundation for a smart contracts proj
 - **[Etherscan](https://etherscan.io)**: Verify contracts in The Ethereum Blockchain Explorer
 
 #### Hardhat Plugins
+
 - ABI Exporter
 - Gas Reporter
 - Contract Sizer
 - OpenZeppelin Upgrades
+
 ## Usage
 
 Look at the `package.json` inside scripts section to see available commands. A number of helper build scripts are located in `/scripts`.
+
 ### Build contracts
 
 Compiles contracts and creates Typechain bindings.
