@@ -15,20 +15,24 @@ import 'hardhat-contract-sizer'
 import '@tenderly/hardhat-tenderly'
 import '@openzeppelin/hardhat-upgrades'
 import '@typechain/hardhat'
+import '@nomiclabs/hardhat-web3'
+import web3 from 'web3'
 
 // Networks
+type Accounts = string[] | { mnemonic: string }
 
 interface NetworkConfig {
   network: string
   chainId: number
   gas?: number | 'auto'
   gasPrice?: number | 'auto'
+  accounts?: Accounts
 }
 
 const networkConfigs: NetworkConfig[] = [
   { network: 'mainnet', chainId: 1 },
   { network: 'ropsten', chainId: 3 },
-  { network: 'rinkeby', chainId: 4 },
+  { network: 'rinkeby', chainId: 4, accounts: [process.env.PRIVATE_KEY] },
   { network: 'kovan', chainId: 42 },
 ]
 
@@ -42,14 +46,19 @@ function getDefaultProviderURL(network: string) {
 
 function setupDefaultNetworkProviders(buidlerConfig) {
   for (const netConfig of networkConfigs) {
+    let accounts: Accounts = []
+    if (netConfig.accounts) {
+      accounts = netConfig.accounts
+    } else {
+      accounts = { mnemonic: getAccountMnemonic() }
+    }
+
     buidlerConfig.networks[netConfig.network] = {
       chainId: netConfig.chainId,
       url: getDefaultProviderURL(netConfig.network),
       gas: netConfig.gasPrice || 'auto',
       gasPrice: netConfig.gasPrice || 'auto',
-      accounts: {
-        mnemonic: getAccountMnemonic(),
-      },
+      accounts: accounts,
     }
   }
 }
@@ -62,6 +71,16 @@ task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
     console.log(await account.getAddress())
   }
 })
+
+task('balance', "Prints an account's balance")
+  .addParam('account', "The account's address")
+  .setAction(async (taskArgs) => {
+    const web3Instance = new web3(getDefaultProviderURL('rinkeby'))
+    const account = web3Instance.utils.toChecksumAddress(taskArgs.account)
+    const balance = await web3Instance.eth.getBalance(account)
+
+    console.log(web3Instance.utils.fromWei(balance, 'ether'), 'ETH')
+  })
 
 // Config
 
