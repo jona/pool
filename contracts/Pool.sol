@@ -49,10 +49,10 @@ contract Pool {
   event Deposit(address from, uint256 amount);
 
   // Emmited when amount withdrawn from pool
-  event Withdraw(address from, uint256);
+  event Withdraw(address from, uint256 amount);
 
   // Emmited when amount deposited into reward's pool
-  event RewardsDeposited(address from, uint256);
+  event RewardsDeposited(address from, uint256 amount);
 
   // Deposit ETH into pool
   function deposit(uint256 amount) public payable {
