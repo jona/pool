@@ -82,6 +82,7 @@ contract Pool {
 
       if (rewards[i].depositorCount == 0) {
         delete rewards[i];
+        totalRewards -= 1;
       }
     }
 
