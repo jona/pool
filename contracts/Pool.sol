@@ -55,7 +55,7 @@ contract Pool {
   event RewardsDeposited(address from, uint256 amount);
 
   // Deposit ETH into pool
-  function deposit(uint256 amount) public payable {
+  function deposit(uint256 amount) external payable {
     require(msg.value == amount, "Amount does not match value");
 
     if (depositors[msg.sender].balance == 0) {
@@ -69,7 +69,7 @@ contract Pool {
   }
 
   // Withdraw deposit and rewards
-  function withdraw() public {
+  function withdraw() external {
     require(depositors[msg.sender].balance > 0, "No pool exists for this sender");
 
     uint256 withdrawAmount = depositors[msg.sender].balance;
@@ -99,7 +99,7 @@ contract Pool {
   }
 
   // Owner can deposit rewards
-  function depositRewards(uint256 amount) public payable {
+  function depositRewards(uint256 amount) external payable {
     require(msg.sender == owner, "Not owner of the contract");
     require(msg.value == amount, "Amount does not match value");
     require(totalDepositors > 0, "No depositors are available for rewards");
@@ -116,15 +116,15 @@ contract Pool {
     emit RewardsDeposited(msg.sender, msg.value);
   }
 
-  function getBalance() public view returns (uint256) {
+  function getBalance() external view returns (uint256) {
     return address(this).balance;
   }
 
-  function getReward(uint256 i) public view returns (Reward memory) {
+  function getReward(uint256 i) external view returns (Reward memory) {
     return rewards[i];
   }
 
-  function getMyBalance() public view returns (uint256) {
+  function getMyBalance() external view returns (uint256) {
     return depositors[msg.sender].balance;
   }
 }
