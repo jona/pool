@@ -91,11 +91,11 @@ contract Pool {
     // Prevent re-entrancy attacks
     delete depositors[msg.sender];
 
-    payable(msg.sender).transfer(withdrawAmount);
-
     totalDepositors -= 1;
 
     emit Withdraw(msg.sender, withdrawAmount);
+
+    payable(msg.sender).transfer(withdrawAmount);
   }
 
   // Owner can deposit rewards
