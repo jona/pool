@@ -74,6 +74,8 @@ contract Pool {
 
     uint256 withdrawAmount = depositors[msg.sender].balance;
 
+    uint256 _totalRewards = totalRewards;
+
     for (uint256 i = 0; i < totalRewards; i++) {
       if (rewards[i].depositedAt >= depositors[msg.sender].firstDepositAt) {
         withdrawAmount += rewards[i].amount;
@@ -82,9 +84,11 @@ contract Pool {
 
       if (rewards[i].depositorCount == 0) {
         delete rewards[i];
-        totalRewards -= 1;
+        _totalRewards -= 1;
       }
     }
+
+    totalRewards = _totalRewards;
 
     require(withdrawAmount <= address(this).balance, "Not enough funds");
 
