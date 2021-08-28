@@ -11,30 +11,20 @@ contract Pool {
   // Owner
   address private immutable owner;
 
-  // Total depositors
   uint256 private totalDepositors;
-
-  // Track amount and block number
-  struct Depositor {
-    uint256 balance;
-    uint256 firstDepositAt;
-  }
-
-  // Depositors
-  mapping(address => Depositor) private depositors;
-
-  // Total Rewards
   uint256 private totalRewards;
+  uint256 private depositBalance;
 
   // Track amount and block number
   struct Reward {
     uint256 amount;
     uint256 depositorCount;
-    uint256 depositedAt;
+    uint256 contractBalance;
   }
 
-  // Rewards
   mapping(uint256 => Reward) private rewards;
+
+  mapping(address => mapping(uint256 => uint256)) private deposits;
 
   // Constructor
   constructor() {
@@ -58,46 +48,49 @@ contract Pool {
   function deposit(uint256 amount) external payable {
     require(msg.value == amount, "Amount does not match value");
 
-    if (depositors[msg.sender].balance == 0) {
-      depositors[msg.sender].firstDepositAt = block.number;
+    if (deposits[msg.sender][0] == 0) {
       totalDepositors += 1;
     }
 
-    depositors[msg.sender].balance = depositors[msg.sender].balance.add(amount);
+    deposits[msg.sender][totalRewards] += msg.value;
+
+    depositBalance += msg.value;
 
     emit Deposit(msg.sender, msg.value);
   }
 
   // Withdraw deposit and rewards
   function withdraw() external {
-    require(depositors[msg.sender].balance > 0, "No pool exists for this sender");
+    require(deposits[msg.sender][0] != 0, "User has nothing to withdraw");
 
-    uint256 withdrawAmount = depositors[msg.sender].balance;
+    uint256 withdrawAmount;
+    uint256 depositedAmount;
 
-    uint256 _totalRewards = totalRewards;
+    for (uint256 i = 0; i <= totalRewards; i++) {
+      withdrawAmount += deposits[msg.sender][i];
 
-    for (uint256 i = 0; i < totalRewards; i++) {
-      if (rewards[i].depositedAt >= depositors[msg.sender].firstDepositAt) {
-        withdrawAmount += rewards[i].amount;
-        rewards[i].depositorCount -= 1;
-      }
+      if (rewards[i].contractBalance == 0) continue;
 
+      depositedAmount += deposits[msg.sender][i];
+
+      uint256 ratio = depositedAmount.mul(PRECISION).div(rewards[i].contractBalance);
+      uint256 cut = ratio.mul(rewards[i].amount).div(PRECISION);
+
+      withdrawAmount += cut;
+      rewards[i].depositorCount -= 1;
+      deposits[msg.sender][i] = 0;
+
+      // TODO: If last withdrawal, add remainder to withdrawAmount
       if (rewards[i].depositorCount == 0) {
         delete rewards[i];
-        _totalRewards -= 1;
       }
     }
 
-    totalRewards = _totalRewards;
-
     require(withdrawAmount <= address(this).balance, "Not enough funds");
 
-    // Prevent re-entrancy attacks
-    delete depositors[msg.sender];
+    emit Withdraw(msg.sender, withdrawAmount);
 
     totalDepositors -= 1;
-
-    emit Withdraw(msg.sender, withdrawAmount);
 
     payable(msg.sender).transfer(withdrawAmount);
   }
@@ -108,13 +101,10 @@ contract Pool {
     require(msg.value == amount, "Amount does not match value");
     require(totalDepositors > 0, "No depositors are available for rewards");
 
-    // NOTE: When it gets withdrawn, there's a remainder left
-    // because it's not precise
-    uint256 shareAmount = msg.value.mul(PRECISION).div(totalDepositors).div(PRECISION);
-
-    rewards[totalRewards].amount = shareAmount;
+    rewards[totalRewards].amount = msg.value;
     rewards[totalRewards].depositorCount = totalDepositors;
-    rewards[totalRewards].depositedAt = block.number;
+    rewards[totalRewards].contractBalance = depositBalance;
+
     totalRewards += 1;
 
     emit RewardsDeposited(msg.sender, msg.value);
@@ -128,7 +118,11 @@ contract Pool {
     return rewards[i];
   }
 
-  function getMyBalance() external view returns (uint256) {
-    return depositors[msg.sender].balance;
+  function getTotalRewards() external view returns (uint256) {
+    return totalRewards;
+  }
+
+  function getMyBalance(uint256 i) external view returns (uint256) {
+    return deposits[msg.sender][i];
   }
 }

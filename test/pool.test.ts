@@ -26,7 +26,8 @@ describe('Pool', () => {
   describe('withdraw', async () => {
     context('when amount > 0', async () => {
       it('should withdraw', async () => {
-        await pool.deposit(10, { value: 10 })
+        await pool.deposit(100, { value: 100 })
+        await pool.depositRewards(100, { value: 100 })
         await pool.withdraw()
       })
     })
@@ -34,7 +35,7 @@ describe('Pool', () => {
     context('when amount not > 0', async () => {
       it('should withdraw', async () => {
         const tx = pool.withdraw()
-        await expect(tx).revertedWith('No pool exists for this sender')
+        await expect(tx).revertedWith('User has nothing to withdraw')
       })
     })
   })
